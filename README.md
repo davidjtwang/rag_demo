@@ -1,3 +1,3 @@
 用 app.py 的概念改成 html 頁面；截圖提供 UI 給 Gemini 參考直接生 code，接著小調小修。
 demo 展示：
-* [🧬 文字語意接近度](https://davidjtwang.github.io/rag_demo/index.html)
+* [🧬 文字語意近似度](https://davidjtwang.github.io/rag_demo/index.html)
