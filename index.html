@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>文字語意接近度 ( Embeddings + Cosine )</title>
+  <style>
+    * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    body { background-color: #0b0f19; color: #f1f5f9; margin: 0; padding: 0; display: flex; height: 100vh; overflow: hidden; }
+    
+    /* 側邊欄加寬至 400px，確保文字與標籤不折行 */
+    .sidebar { width: 400px; background-color: #111827; border-right: 1px solid #1f2937; padding: 1.25rem; display: flex; flex-direction: column; gap: 0.85rem; overflow-y: auto; flex-shrink: 0; }
+    .main-content { flex: 1; padding: 1.25rem; overflow-y: auto; display: flex; flex-direction: column; gap: 1rem; background-color: #0b0f19; }
+
+    /* 標題區 */
+    .app-header { font-size: 1.05rem; font-weight: 700; color: #f8fafc; display: flex; align-items: center; gap: 0.5rem; }
+    .app-subtitle { font-size: 0.75rem; color: #94a3b8; line-height: 1.4; margin-top: 0.2rem; }
+
+    /* 表單元件 */
+    .form-group { display: flex; flex-direction: column; gap: 0.35rem; }
+    label { font-size: 0.82rem; font-weight: 600; color: #cbd5e1; white-space: nowrap; }
+    
+    input[type="password"], select, textarea, input[type="number"] {
+      background-color: #1f2937; border: 1px solid #374151; color: #f8fafc;
+      padding: 0.5rem 0.65rem; border-radius: 6px; font-size: 0.88rem; outline: none; transition: border 0.2s;
+    }
+    input[type="password"]:focus, select:focus, textarea:focus, input[type="number"]:focus { border-color: #3b82f6; }
+    
+    /* 模型與批次大小對齊容器 */
+    .row-inputs { display: flex; gap: 0.75rem; align-items: flex-end; }
+    .row-inputs > div:first-child { flex: 1.3; }
+    .row-inputs > div:last-child { flex: 1; }
+    .row-inputs select, .row-inputs input { height: 38px; width: 100%; }
+
+    textarea { resize: vertical; min-height: 150px; font-family: inherit; }
+    
+    .hint { font-size: 0.72rem; color: #94a3b8; line-height: 1.35; }
+    .checkbox-group { display: flex; align-items: center; gap: 0.4rem; font-size: 0.78rem; color: #cbd5e1; cursor: pointer; margin-top: 0.15rem; }
+
+    /* 操作按鈕樣式 */
+    .btn-primary { background-color: #2563eb; color: #ffffff; border: none; padding: 0.65rem; border-radius: 6px; font-weight: 600; cursor: pointer; font-size: 0.9rem; transition: background 0.2s; width: 100%; margin-top: 0.2rem; }
+    .btn-primary:hover { background-color: #1d4ed8; }
+    .btn-primary:disabled { background-color: #4b5563; cursor: not-allowed; }
+    
+    .btn-group { display: flex; gap: 0.5rem; margin-top: -0.35rem; }
+    .btn-secondary { flex: 1; background-color: #374151; color: #f1f5f9; border: none; padding: 0.5rem; border-radius: 6px; font-weight: 600; cursor: pointer; font-size: 0.82rem; transition: background 0.2s; }
+    .btn-secondary:hover { background-color: #4b5563; }
+
+    /* 右側面板卡片 */
+    .card { background-color: #111827; border: 1px solid #1f2937; border-radius: 8px; padding: 1.25rem; }
+    .card-header { display: flex; justify-content: space-between; align-items: center; font-size: 0.9rem; font-weight: 600; color: #e2e8f0; margin-bottom: 1rem; border-bottom: 1px solid #1f2937; padding-bottom: 0.75rem; }
+    .status-badge { background-color: #064e3b; color: #34d399; padding: 0.2rem 0.6rem; border-radius: 4px; font-size: 0.75rem; }
+    .status-running { background-color: #78350f; color: #fbbf24; }
+    .status-idle { background-color: #374151; color: #9ca3af; }
+
+    /* 矩陣表格：字體放大、加粗、亮白色與陰影 */
+    .table-container { overflow-x: auto; margin-top: 0.5rem; }
+    table { width: 100%; border-collapse: collapse; text-align: center; font-size: 0.95rem; }
+    th, td { 
+      padding: 0.75rem 0.6rem; 
+      border: 1px solid #1f2937; 
+      white-space: nowrap; 
+      color: #ffffff; 
+      font-weight: 600;
+      text-shadow: 0 1px 2px rgba(0,0,0,0.6); 
+    }
+    th { background-color: #1f2937; color: #ffffff; font-weight: 700; }
+    th:first-child, td:first-child { 
+      text-align: left; 
+      padding-left: 0.85rem; 
+      background-color: #161e2e; 
+      font-weight: 700; 
+      color: #ffffff;
+    }
+
+    .info-footer { font-size: 0.75rem; color: #94a3b8; margin-top: 0.5rem; display: flex; justify-content: space-between; }
+    .error-text { color: #f87171; background: #7f1d1d; padding: 0.75rem; border-radius: 6px; font-size: 0.85rem; }
+  </style>
+</head>
+<body>
+
+  <!-- 左側設定與輸入面板 -->
+  <div class="sidebar">
+    <div>
+      <div class="app-header">🧬 文字語意接近度</div>
+      <div class="app-subtitle">輸入文字 / 關鍵字清單 → 送至 OpenAI Embeddings → 計算 Cosine 相似度 → 產出表格與熱力圖色塊</div>
+    </div>
+
+    <div class="form-group">
+      <label for="apiKey">OpenAI API Key <span style="font-weight:normal; color:#94a3b8;">(僅保存在你的瀏覽器)</span></label>
+      <input type="password" id="apiKey" placeholder="sk-proj-..." oninput="saveApiKeySetting()">
+      <label class="checkbox-group">
+        <input type="checkbox" id="rememberKey" onchange="toggleRememberKey()"> 記住在本機 (LocalStorage)
+      </label>
+    </div>
+
+    <!-- 模型與批次大小並排欄位 -->
+    <div class="row-inputs">
+      <div class="form-group">
+        <label for="modelSelect">Embedding 模型</label>
+        <select id="modelSelect">
+          <option value="text-embedding-3-small">text-embedding-3-small</option>
+          <option value="text-embedding-3-large">text-embedding-3-large</option>
+          <option value="text-embedding-ada-002">text-embedding-ada-002</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label for="batchSize">批次大小 (Batch Size)</label>
+        <input type="number" id="batchSize" value="96" min="1" max="2048">
+      </div>
+    </div>
+    <div class="hint">建議先用 small；量大或精度要求高再切 large。一次送出的字串數，視情況調小以避免 429。</div>
+
+    <!-- 關鍵字清單輸入區 -->
+    <div class="form-group">
+      <label for="itemList">文字 / 關鍵字清單 (每行一個)</label>
+      <textarea id="itemList" placeholder="請輸入項目，每行一個...">貓喜歡吃魚
+小貓愛吃海鮮
+今天天氣很好
+股市大漲
+我想要寫程式</textarea>
+      <div class="hint">支援多語；重複項自動去重，依輸入順序呈現。</div>
+    </div>
+
+    <!-- 緊靠輸入框的按鈕區 -->
+    <button id="runBtn" class="btn-primary" onclick="runAnalysis()">生成相似度矩陣</button>
+    <div class="btn-group">
+      <button class="btn-secondary" onclick="downloadCSV()">下載 CSV</button>
+      <button class="btn-secondary" onclick="loadSample()">載入範例</button>
+    </div>
+
+    <!-- 底部隱私宣告 -->
+    <div class="hint" style="border-top: 1px solid #1f2937; padding-top: 0.65rem; margin-top: auto;">
+      隱私提示：你的 API Key 僅在本頁面內用於直連 OpenAI，不會上傳到任何第三方伺服器。
+    </div>
+  </div>
+
+  <!-- 右側結果面板 -->
+  <div class="main-content">
+    <div class="card" style="flex: 1; display: flex; flex-direction: column; overflow: hidden;">
+      <div class="card-header">
+        <span>結果</span>
+        <div style="display: flex; gap: 1rem; align-items: center;">
+          <span id="itemCountDisplay">項目數：0</span>
+          <span id="modelDisplay">模型：-</span>
+          <span id="statusBadge" class="status-badge status-idle">等待運算</span>
+        </div>
+      </div>
+
+      <div id="resultArea" style="flex: 1; overflow-y: auto; display: flex; flex-direction: column; justify-content: center; align-items: center; color: #64748b;">
+        <div style="text-align: center;">
+          <div style="font-size: 2.2rem; margin-bottom: 0.5rem;">📐</div>
+          <div>請在左側輸入清單並點擊「生成相似度矩陣」</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    window.addEventListener('DOMContentLoaded', () => {
+      const savedKey = localStorage.getItem('openai_api_key');
+      if (savedKey) {
+        document.getElementById('apiKey').value = savedKey;
+        document.getElementById('rememberKey').checked = true;
+      }
+    });
+
+    function toggleRememberKey() {
+      const remember = document.getElementById('rememberKey').checked;
+      const apiKey = document.getElementById('apiKey').value.trim();
+      if (remember) {
+        localStorage.setItem('openai_api_key', apiKey);
+      } else {
+        localStorage.removeItem('openai_api_key');
+      }
+    }
+
+    function saveApiKeySetting() {
+      const remember = document.getElementById('rememberKey').checked;
+      if (remember) {
+        const apiKey = document.getElementById('apiKey').value.trim();
+        localStorage.setItem('openai_api_key', apiKey);
+      }
+    }
+
+    function loadSample() {
+      const sampleText = "貓喜歡吃魚\n小貓愛吃海鮮\n今天天氣很好\n股市大漲\n我想要寫程式";
+      document.getElementById('itemList').value = sampleText;
+    }
+
+    function cosineSimilarity(vecA, vecB) {
+      let dotProduct = 0.0, normA = 0.0, normB = 0.0;
+      for (let i = 0; i < vecA.length; i++) {
+        dotProduct += vecA[i] * vecB[i];
+        normA += vecA[i] * vecA[i];
+        normB += vecB[i] * vecB[i];
+      }
+      if (normA === 0 || normB === 0) return 0;
+      return dotProduct / (Math.sqrt(normA) * Math.sqrt(normB));
+    }
+
+    // 藍綠色系 (Teal / Cyan) 熱力圖漸層
+    function getHeatmapColor(score) {
+      const s = Math.max(0, Math.min(1, score));
+      const red = Math.round(15 + (10 * (1 - s)));
+      const green = Math.round(184 * (0.3 + 0.7 * s));
+      const blue = Math.round(166 * (0.4 + 0.6 * s));
+      const alpha = 0.15 + (s * 0.75);
+      return `rgba(${red}, ${green}, ${blue}, ${alpha})`;
+    }
+
+    let globalMatrixData = null;
+
+    async function runAnalysis() {
+      let rawKey = document.getElementById('apiKey').value.trim();
+      const apiKey = rawKey.replace(/[^\x00-\x7F]/g, '').replace(/["'`]/g, '').trim();
+      const model = document.getElementById('modelSelect').value;
+      const rawText = document.getElementById('itemList').value;
+      
+      const statusBadge = document.getElementById('statusBadge');
+      const resultArea = document.getElementById('resultArea');
+      const itemCountDisplay = document.getElementById('itemCountDisplay');
+      const modelDisplay = document.getElementById('modelDisplay');
+      const runBtn = document.getElementById('runBtn');
+
+      if (!apiKey) {
+        alert('請先輸入有效的 OpenAI API Key！');
+        return;
+      }
+
+      const items = rawText.split('\n')
+        .map(s => s.trim())
+        .filter(s => s.length > 0);
+      
+      const uniqueItems = [...new Set(items)];
+
+      if (uniqueItems.length === 0) {
+        alert('請至少輸入一個有效項目！');
+        return;
+      }
+
+      itemCountDisplay.innerText = `項目數：${uniqueItems.length}`;
+      modelDisplay.innerText = `模型：${model}`;
+      statusBadge.className = 'status-badge status-running';
+      statusBadge.innerText = '運算中...';
+      runBtn.disabled = true;
+      resultArea.innerHTML = `<div style="color: #94a3b8; text-align: center;">正在請求 ${uniqueItems.length} 個項目的 Embedding 向量...</div>`;
+
+      const startTime = performance.now();
+
+      try {
+        const batchSize = parseInt(document.getElementById('batchSize').value) || 96;
+        let allEmbeddings = [];
+
+        for (let i = 0; i < uniqueItems.length; i += batchSize) {
+          const chunk = uniqueItems.slice(i, i + batchSize);
+          const response = await fetch('https://api.openai.com/v1/embeddings', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${apiKey}`
+            },
+            body: JSON.stringify({ input: chunk, model: model })
+          });
+
+          const data = await response.json();
+          if (!response.ok) {
+            throw new Error(data.error?.message || 'Embedding API 請求失敗');
+          }
+          
+          data.data.sort((a, b) => a.index - b.index);
+          allEmbeddings = allEmbeddings.concat(data.data.map(item => item.embedding));
+        }
+
+        const endTime = performance.now();
+        const durationMs = Math.round(endTime - startTime);
+
+        const matrix = [];
+        for (let i = 0; i < uniqueItems.length; i++) {
+          const row = [];
+          for (let j = 0; j < uniqueItems.length; j++) {
+            row.push(cosineSimilarity(allEmbeddings[i], allEmbeddings[j]));
+          }
+          matrix.push(row);
+        }
+
+        globalMatrixData = { items: uniqueItems, matrix: matrix };
+
+        let html = `
+          <div class="table-container">
+            <table>
+              <thead>
+                <tr>
+                  <th>項目 / 項目</th>
+        `;
+        uniqueItems.forEach(item => {
+          html += `<th>${escapeHtml(item)}</th>`;
+        });
+        html += `</tr></thead><tbody>`;
+
+        uniqueItems.forEach((rowItem, i) => {
+          html += `<tr>`;
+          html += `<td>${escapeHtml(rowItem)}</td>`;
+          uniqueItems.forEach((colItem, j) => {
+            const score = matrix[i][j];
+            const colorBg = getHeatmapColor(score);
+            html += `<td style="background-color: ${colorBg}; font-weight: ${i === j ? '800' : '600'}; color: #ffffff;">${score.toFixed(3)}</td>`;
+          });
+          html += `</tr>`;
+        });
+        html += `</tbody></table></div>`;
+        html += `
+          <div class="info-footer">
+            <span>完成時間：${durationMs} ms (不含渲染) | 提示：對角線固定為 1.000 ；顏色越深表示相似度越高。</span>
+          </div>
+        `;
+
+        resultArea.style.justifyContent = 'flex-start';
+        resultArea.style.alignItems = 'stretch';
+        resultArea.innerHTML = html;
+
+        statusBadge.className = 'status-badge';
+        statusBadge.innerText = '完成';
+
+      } catch (err) {
+        statusBadge.className = 'status-badge';
+        statusBadge.style.backgroundColor = '#7f1d1d';
+        statusBadge.style.color = '#f87171';
+        statusBadge.innerText = '錯誤';
+        resultArea.innerHTML = `<div class="error-text">發生錯誤：${err.message}</div>`;
+      } finally {
+        runBtn.disabled = false;
+      }
+    }
+
+    function escapeHtml(str) {
+      return str.replace(/[&<>'"]/g, 
+        tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag)
+      );
+    }
+
+    function downloadCSV() {
+      if (!globalMatrixData) {
+        alert('目前尚無產出的矩陣數據可以下載！');
+        return;
+      }
+
+      const { items, matrix } = globalMatrixData;
+      let csvContent = "\uFEFF" + "項目 / 項目," + items.map(i => `"${i}"`).join(",") + "\n";
+      
+      items.forEach((item, i) => {
+        let row = [`"${item}"`];
+        items.forEach((_, j) => {
+          row.push(matrix[i][j].toFixed(4));
+        });
+        csvContent += row.join(",") + "\n";
+      });
+
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `brand_similarity_matrix_${Date.now()}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }
+  </script>
+</body>
+</html>
