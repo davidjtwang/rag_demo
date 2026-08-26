@@ -1,0 +1,12 @@
+# 隱藏環境變數檔案 (保護 API Key)
+.env
+
+# 隱藏 Python 產生的暫存檔
+__pycache__/
+*.pyc
+
+# 隱藏虛擬環境資料夾 (如果有在專案內建立)
+.venv/
+env/
+
+KEY.txt
