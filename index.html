@@ -83,7 +83,7 @@
   <div class="sidebar">
     <div>
       <div class="app-header">🧬 文字語意近似度</div>
-      <div class="app-subtitle">輸入文字 / 關鍵字清單 → 送至 OpenAI Embeddings → 計算 Cosine 相似度 → 產出表格與熱力圖色塊</div>
+      <div class="app-subtitle">輸入文字 / 關鍵字清單 → 呼叫 OpenAI Vector embeddings API → 計算 Cosine Similarity → 產出相似矩陣與 Heat Map</div>
     </div>
 
     <div class="form-group">
@@ -109,17 +109,17 @@
         <input type="number" id="batchSize" value="96" min="1" max="2048">
       </div>
     </div>
-    <div class="hint">建議先用 small；量大或精度要求高再切 large。一次送出的字串數，視情況調小以避免 429。</div>
+    <div class="hint">建議先用 small；量大或精度要求高再切 large。一次送出的字串數，視情況調小以避免負荷過重出現錯誤訊息。</div>
 
     <!-- 關鍵字清單輸入區 -->
     <div class="form-group">
-      <label for="itemList">文字 / 關鍵字清單 (每行一個)</label>
-      <textarea id="itemList" placeholder="請輸入項目，每行一個...">貓喜歡吃魚
-小貓愛吃海鮮
+      <label for="itemList">文字 / 關鍵字清單 (每行一個或一句)</label>
+      <textarea id="itemList" placeholder="請輸入項目，每行一個...">用於文本挖掘與檢索
+我喜歡蔡依林
 今天天氣很好
-股市大漲
-我想要寫程式</textarea>
-      <div class="hint">支援多語；重複項自動去重，依輸入順序呈現。</div>
+股市天天大漲
+AI幫我寫程式</textarea>
+      <div class="hint">支援多語系；重複項將自動去重，依輸入順序呈現。</div>
     </div>
 
     <!-- 緊靠輸入框的按鈕區 -->
