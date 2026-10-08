@@ -2,6 +2,6 @@
 demo 展示：
 * [🧬 文字語意近似度](https://davidjtwang.github.io/rag_demo/cosine-similarity-matrix.html)
 * [🏠 關鍵字語意空間](https://davidjtwang.github.io/rag_demo/keyword_embedding_app_v2.html)
-* [🏠 關鍵字語意空間 第三版](https://davidjtwang.github.io/rag_demo/keyword_embedding_app_v3.html)
+* [🏠 關鍵字語意空間_第三版](https://davidjtwang.github.io/rag_demo/keyword_embedding_app_v3.html)
 * [📖 論文檢索詞關聯網絡](https://davidjtwang.github.io/rag_demo/keyword_network.html)
 * [📖 論文檢索詞關聯網絡_深色版](https://davidjtwang.github.io/rag_demo/keyword_network_dark.html)
