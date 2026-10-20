@@ -299,8 +299,8 @@ function highlightFilter(filter) {
   <p class="network-description">臺灣博碩士論文知識加值系統 · 精準／不限欄位 · 含使用者補齊的 6 組交集；完整資料保留於 CSV<br>節點大小依 ln(1 + 單詞筆數)，連線粗細依 Cosine／Ochiai 相似度，顏色為 Louvain 集群。</p>
 </header>
 <div class="network-toolbar" aria-label="網絡圖控制">
-  <label class="network-control"><span class="control-label">最低 Cosine <strong id="cosine-value">0.1</strong></span><input id="min-cosine" aria-label="最低 Cosine similarity" type="range" min="0" max="1" step="0.01" value="0.1"></label>
-  <label class="network-control"><span>最低共同論文數</span><input id="min-intersection" aria-label="最低共同論文數" type="number" min="0" step="1" value="3"></label>
+  <label class="network-control"><span class="control-label">最低 Cosine (關係強度)<strong id="cosine-value">0.1</strong></span><input id="min-cosine" aria-label="最低 Cosine similarity (關係強度)" type="range" min="0" max="1" step="0.01" value="0.1"></label>
+  <label class="network-control"><span>最低共同論文數 (規模)</span><input id="min-intersection" aria-label="最低共同論文數 (規模)" type="number" min="0" step="1" value="3"></label>
   <label class="network-control"><span>尋找關鍵詞</span><select id="focus-keyword" aria-label="尋找關鍵詞"><option value="">選擇關鍵詞…</option><option value="人文地產景">人文地產景</option><option value="社區行銷">社區行銷</option><option value="社區營造">社區營造</option><option value="社區總體營造">社區總體營造</option><option value="社區發展">社區發展</option><option value="社區意識">社區意識</option><option value="地方創生">地方創生</option><option value="永續發展">永續發展</option><option value="生態旅遊">生態旅遊</option><option value="社會資本">社會資本</option><option value="非營利組織">非營利組織</option><option value="文化行銷">文化行銷</option><option value="文化創意產業">文化創意產業</option><option value="文化商品">文化商品</option><option value="文化產業">文化產業</option><option value="創意文化園區">創意文化園區</option><option value="體驗行銷">體驗行銷</option><option value="行銷策略">行銷策略</option></select></label>
   <div class="network-actions"><button id="fit-network" type="button">查看全圖</button><button id="toggle-physics" type="button">暫停佈局</button><button id="reset-filters" type="button">重設門檻</button></div>
 </div>
